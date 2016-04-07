@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even){background-color: #f2f2f2}
+        </style>
+    </head>
+    <body>
+        <form action="/keywords/addword" method="post">
+            Word: <textarea style="height:200px;" name="word" type="text" ></textarea>
+            Category: <textarea style="height:200px;" name="category" type="text">{{categories}}</textarea>
+            <input value="Add" type="submit" />
+        </form>
+    </body>
+</html>
