@@ -17,9 +17,9 @@
         </style>
     </head>
     <body>
-        <form action="/keywords/addword" method="post">
-            Word: <textarea style="height:200px;" name="word" type="text" ></textarea>
-            Category: <textarea style="height:200px;" name="category" type="text">{{categories}}</textarea>
+        <form action="/addwordbycategory" method="post">
+            words: <textarea style="height:200px;" name="words" type="text" ></textarea>
+            categories: <textarea style="height:200px;" name="categories" type="text">{{categories}}</textarea>
             <input value="Add" type="submit" />
         </form>
     </body>

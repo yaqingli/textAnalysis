@@ -1,41 +1,15 @@
 from bottle import route, run, template, static_file,request, view
-import keywords
+import json
+from keywords import WordContext
+import sqlite3
+from collections import defaultdict
 
 
-@route('/keywords/search/')
-@route('/keywords/search/<category>')
-@view('keywords.tpl')
-def search(category=''):
-    result = {'words':[]}
-    category_in_form = request.params.get('category')
-    if category_in_form:
-        category = category_in_form
-    if category:
-        result['words'] = keywords.get_related_words(category)
-    result['category'] = category
-        #content = '</br>'.join([','.join((wordline['word'],wordline['category'],wordline['create_time'])) for wordline in words])
-    return result
-    #return template('<b>Hello {{name}}</b>!', name=name)
+_dbName = 'data.db'
 
 
-@route('/keywords/addword')
-@view('addwords.html')
-def add_word_view():
-    return {'categories': ''}
-
-
-@route('/keywords/addword', method="post")
-@view('addwords.html')
-def add_words():
-    words = request.params.get('word').strip().strip('\t').rstrip(';')
-    categories = request.params.get('category').strip().strip('\t').rstrip(';')
-    word_collection = [word.strip() for word in words.split(';')]
-    category_collection = [category.strip() for category in categories.split(';')]
-    for word in word_collection:
-        for category in category_collection:
-            keywords.add_key_word(word, category)
-    return {'categories': categories}
-
+#todo: Research where to implement the add function
+#todo: Research where to implement the update function
 
 @route('/test/template')
 @view('testtml')
@@ -43,7 +17,61 @@ def test():
     return {'name':'Bill'}
 
 
+#new version here
+@route('/')
+@route('/search')
+@route('/search/')
+def search_view():
+    return template('thewords.html', request=request)
 
+@route('/search/searchWordStartWith')
+def searchWordStartWith():
+    word = request.params.get('word', '', type=str)
+    if word:
+        conn = sqlite3.connect(_dbName)
+        k = WordContext(conn)
+        words = k.get_word_for_prompt(word, 10)
+        conn.close()
+        return json.dumps({'words':words})
+    else:
+        return json.dumps({'words':[]})
+
+
+@route('/search/related/')
+@route('/search/related')
+def searchRelated():
+    word = request.params.get('word', '', type=str)
+    conn = sqlite3.connect(_dbName)
+    k = WordContext(conn)
+    related_words = k.get_related_words(word)
+    conn.close()
+    wordsDict = defaultdict()
+    for item in related_words:
+        wordsDict[item['id1']] = item['word1']
+        wordsDict[item['id2']] = item['word2']
+    words = [{'id': k, 'name': v} for (k, v) in wordsDict.items()]
+    return json.dumps({'related_words':related_words, 'words':words})
+
+#add word in a page
+@route('/addwordbycategory')
+def add_word_by_category_view():
+    return template('addwords_by_category.html', {'categories': ''})
+
+
+@route('/addwordbycategory', method="post")
+@view('addwords_by_category.html')
+def add_words():
+    words = request.params.get('words').strip().strip('\t').rstrip(';')
+    categories = request.params.get('categories').strip().strip('\t').rstrip(';')
+    word_collection = [word.strip() for word in words.split(';')]
+    category_collection = [category.strip() for category in categories.split(';')]
+    with sqlite3.connect(_dbName) as conn:
+        wc = WordContext(conn)
+        for word in word_collection:
+            for category in category_collection:
+                wc.add_connection({'word1':word, 'word2':category, 'direction': 2, 'description':''})
+
+    return {'categories': categories}
 
 
 run(host='localhost', port=8080)

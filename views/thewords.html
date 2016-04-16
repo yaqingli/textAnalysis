@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Words</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.0/vis.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.0/vis.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.0/vis.min.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript">
+      var $SCRIPT_ROOT = "{{ request.script_name }}";
+    </script>
+    <script type="text/javascript">
+      $(function() {
+        var submit_form = function(e) {
+          $.getJSON($SCRIPT_ROOT + '_add_numbers', {
+            a: $('input[name="a"]').val(),
+            b: $('input[name="b"]').val()
+              }, function(data) {
+                $('#result').text(data.result);
+                $('input[name=a]').focus().select();
+              });
+          return false;
+          };
+
+        var get_prompt = function(e) {
+          $.getJSON($SCRIPT_ROOT + 'search/searchWordStartWith', {
+            word: $('#txtSearchBox').val()
+              }, function(data) {
+                $('.dropdown-content').empty();
+                for(i =0; i<data.words.length;i++) {
+                    $('.dropdown-content').append('<p>'+data.words[i]+'</p>');
+                    $('.dropdown-content').show();
+                }
+                $('#prompt > p').bind('click', function(e) {
+                    $('#txtSearchBox').val($(this).text());
+                    search_word(e);
+                });
+                //$('#result').text(data.result);
+                //$('input[name=a]').focus().select();
+              });
+          return false;
+          };
+
+          var search_word = function(e) {
+              if($('#prompt > .current').length > 0)
+              {
+                $('#txtSearchBox').val($('#prompt > .current').text());
+              }
+              $('#prompt').hide();
+              $('#prompt').empty();
+              $('#content').empty();
+              $.getJSON($SCRIPT_ROOT + 'search/related', {
+                word: $('#txtSearchBox').val()
+                  }, function(data) {
+                    $('<div/>').css('display', 'table-row')
+                        .append($('<div/>').css('display', 'table-cell').html('word1'))
+                        .append($('<div/>').css('display', 'table-cell').html('word2'))
+                        .appendTo('#content');
+                    var generate_word_link = function(word1)
+                    {
+                        return $('<a/>').attr('href','#')
+                                .text(word1)
+                                .click(
+                                    function(e) {
+                                        $('#txtSearchBox').val($(this).text());
+                                        search_word(e)
+                                    })
+                    }
+                    for(i =0; i<data.related_words.length;i++) {
+                        $('<div/>').css('display', 'table-row')
+                        .append($('<div/>').css('display', 'table-cell').append(generate_word_link(data.related_words[i].word1)))
+                        .append($('<div/>').css('display', 'table-cell').append(generate_word_link(data.related_words[i].word2)))
+                        .appendTo('#content')
+                    }
+                    var network = new vis.Network(document.getElementById('graphContainer'), construct_graph(data), {});
+                  });
+              return false;
+          };
+
+        var construct_graph = function(data)
+        {
+            nodes_data = []
+            for(i=0; i< data['words'].length;i++)
+            {
+                nodes_data.push({id: data['words'][i]['id'], label: data['words'][i]['name']})
+            }
+
+            edges_data = []
+            for(i=0; i< data['related_words'].length;i++)
+            {
+                edges_data.push({from: data['related_words'][i]['id1'], to: data['related_words'][i]['id2']})
+            }
+
+            var data =
+            {
+                nodes: new vis.DataSet(nodes_data),
+                edges: new vis.DataSet(edges_data)
+            }
+
+            return data
+        }
+
+        var show_dropdown = function(e) {
+            $('.dropdown-content').show();
+        };
+
+        $('#btnSearch').bind('click', search_word);
+
+        $('#txtSearchBox').bind({
+            keyup:function(e) {
+                ignore = [13,38,40];
+                if (ignore.indexOf(e.keyCode) < 0) {
+                    get_prompt($('#txtSearchBox').val());
+                }
+            },
+            keydown:function(e) {
+                if (e.keyCode == 13) {
+                    search_word(e)
+                }
+                else if(e.keyCode == 40) //down arrow
+                {
+                    e.stopPropagation();
+                    if($('#prompt > .current').length==0)
+                    {
+                        if($('#prompt > p').first().length > 0)
+                        {
+                            $('#prompt > p').first().addClass('current');
+                        }
+
+                    }
+                    else
+                    {
+                        var currentElement = $('#prompt > .current');
+                        if(currentElement.next().length > 0)//exist next
+                        {
+                            currentElement.removeClass();
+                            currentElement.next().addClass('current');
+                        }
+                    }
+                }
+                else if(e.keyCode == 38) //up arrow
+                {
+                    e.stopPropagation();
+                    var currentElement = $('#prompt > .current');
+                    if(currentElement.length > 0 && currentElement.prev().length > 0)
+                    {
+                        currentElement.removeClass();
+                        currentElement.prev().addClass('current');
+                    }
+                }
+            }
+        });
+
+        //$('#txtSearchBox').bind('click', show_dropdown);
+
+
+
+        /*
+        $('input[type=text]').bind('keydown', function(e) {
+          if (e.keyCode == 13) {
+            submit_form(e);
+          }
+        });*/
+
+        $('input[name=txtSearchBox]').focus();
+      });
+    </script>
+
+    <style>
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            padding: 12px 16px;
+        }
+/*
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+*/
+        .dropdown-content > p:hover {
+        background-color: #666666;
+        }
+
+        #prompt > .current {
+        background-color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        word:
+        <div class="dropdown">
+          <input type="text" value="" id ="txtSearchBox"/>
+          <div id="prompt" class="dropdown-content">
+          </div>
+        </div>
+        <input type="button" id="btnSearch"  value="search"/>
+    </div>
+    <div id="content" style="display:table">
+    </div>
+
+    <div id="graphContainer" style="height:800px">
+    </div>
+</body>
+</html>

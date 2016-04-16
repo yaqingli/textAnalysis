@@ -23,13 +23,13 @@
         </form>
         <table>
             <tr>
-              <th>Word</th>
-              <th>Category</th>
+              <th>Word1</th>
+              <th>Word2</th>
             </tr>
             % for item in words:
                 <tr>
-                <td><a href="/keywords/search/?category={{item['word']}}">{{item['word']}}</a></td>
-                <td>{{item['category']}}</td>
+                <td><a href="/keywords/search/?word={{item['word1']}}">{{item['word1']}}</a></td>
+                <td>{{item['word2']}}</td>
                 <td>{{item['create_time']}}</td>
                 </tr>
             %end
