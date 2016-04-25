@@ -36,8 +36,6 @@
                     $('#txtSearchBox').val($(this).text());
                     search_word(e);
                 });
-                //$('#result').text(data.result);
-                //$('input[name=a]').focus().select();
               });
           return false;
           };
@@ -67,10 +65,12 @@
                                         search_word(e)
                                     })
                     }
-                    for(i =0; i<data.related_words.length;i++) {
+                    var dicWords = {}
+                    data.words.forEach(function(entry) {dicWords[entry.id]=entry;});
+                    for(i =0; i<data.connections.length;i++) {
                         $('<div/>').css('display', 'table-row')
-                        .append($('<div/>').css('display', 'table-cell').append(generate_word_link(data.related_words[i].word1)))
-                        .append($('<div/>').css('display', 'table-cell').append(generate_word_link(data.related_words[i].word2)))
+                        .append($('<div/>').css('display', 'table-cell').append(generate_word_link(dicWords[data.connections[i].id1].name)))
+                        .append($('<div/>').css('display', 'table-cell').append(generate_word_link(dicWords[data.connections[i].id2].name)))
                         .appendTo('#content')
                     }
                     var network = new vis.Network(document.getElementById('graphContainer'), construct_graph(data), {});
@@ -81,15 +81,15 @@
         var construct_graph = function(data)
         {
             nodes_data = []
-            for(i=0; i< data['words'].length;i++)
+            for(i=0; i< data.words.length;i++)
             {
-                nodes_data.push({id: data['words'][i]['id'], label: data['words'][i]['name']})
+                nodes_data.push({id: data.words[i].id, label: data.words[i].name})
             }
 
             edges_data = []
-            for(i=0; i< data['related_words'].length;i++)
+            for(i=0; i< data.connections.length;i++)
             {
-                edges_data.push({from: data['related_words'][i]['id1'], to: data['related_words'][i]['id2']})
+                edges_data.push({from: data.connections[i].id1, to: data.connections[i].id2})
             }
 
             var data =
@@ -205,10 +205,12 @@
         </div>
         <input type="button" id="btnSearch"  value="search"/>
     </div>
-    <div id="content" style="display:table">
-    </div>
+    <div>
+        <div id="content" style="display:table;float:left;position:relative;width:20%">
+        </div>
 
-    <div id="graphContainer" style="height:800px">
+        <div id="graphContainer" style="height:800px;float:right;border-style:solid;width:70%">
+        </div>
     </div>
 </body>
 </html>

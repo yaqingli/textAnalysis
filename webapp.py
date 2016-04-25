@@ -1,8 +1,9 @@
 from bottle import route, run, template, static_file,request, view
 import json
-from keywords import WordContext
+from keywords import WordInfo, ConnectionInfo, WordContext, Connection_RTO
 import sqlite3
 from collections import defaultdict
+import jsonpickle
 
 
 _dbName = 'data.db'
@@ -41,16 +42,12 @@ def searchWordStartWith():
 @route('/search/related')
 def searchRelated():
     word = request.params.get('word', '', type=str)
-    conn = sqlite3.connect(_dbName)
-    k = WordContext(conn)
-    related_words = k.get_related_words(word)
-    conn.close()
-    wordsDict = defaultdict()
-    for item in related_words:
-        wordsDict[item['id1']] = item['word1']
-        wordsDict[item['id2']] = item['word2']
-    words = [{'id': k, 'name': v} for (k, v) in wordsDict.items()]
-    return json.dumps({'related_words':related_words, 'words':words})
+    with sqlite3.connect(_dbName) as conn:
+        k = WordContext(conn)
+        connections = k.get_connections(word)
+        ids = list({connection.id1 for connection in connections}.union({connection.id2 for connection in connections}))
+        words = k.find_words_by_ids(ids)
+    return json.dumps(json.loads(jsonpickle.encode({'connections': connections, 'words': words})))#json.dumps({'connections': connections, 'words': words})
 
 #add word in a page
 @route('/addwordbycategory')
@@ -69,7 +66,7 @@ def add_words():
         wc = WordContext(conn)
         for word in word_collection:
             for category in category_collection:
-                wc.add_connection({'word1':word, 'word2':category, 'direction': 2, 'description':''})
+                wc.add_connection(Connection_RTO(word, category, True, ''))
 
     return {'categories': categories}
 
