@@ -1,7 +1,12 @@
+from collections import Counter
+from io import StringIO
+from pdfminer.converter import TextConverter
+from pdfminer.layout import LAParams
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.pdfpage import PDFPage
 '''
 Implement text related analysis functionality
 '''
-
 
 class Node(object):
     children = []
@@ -57,3 +62,44 @@ def countIndent(txt, indent):
         else:
             break
     return count
+
+
+def count_words(text):
+    '''count the words'''
+    #seperates = ['\n', ' ', ',' ,'\x0c', '—']
+    #ignore_words = ('the', 'a')
+    result = Counter()
+    temp = ''
+    for c in text:
+        if ('a' <= c <= 'z') or ('A' <= c <= 'Z'):
+            temp += c.lower()
+        else:
+            if temp:
+                result[temp] += 1
+                temp = ''
+
+    #last word
+    if temp:
+        result[temp] += 1
+        temp = ''
+
+    return result
+
+
+def get_pdf_file_content(file_path):
+        '''Read words from a pdf file'''
+        output = StringIO()
+        manager = PDFResourceManager()
+        converter = TextConverter(manager, output, laparams=LAParams())
+        interpreter = PDFPageInterpreter(manager, converter)
+        page_count = 0
+
+        with open(file_path, 'rb') as fp:
+            for page in PDFPage.get_pages(fp):
+                interpreter.process_page(page)
+                page_count += 1
+
+        converter.close()
+        text = output.getvalue()
+        output.close()
+        return text, page_count

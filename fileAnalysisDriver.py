@@ -1,46 +1,53 @@
-from collections import Counter
+
 from datetime import datetime
-from io import StringIO
-from pdfminer.converter import TextConverter
-from pdfminer.layout import LAParams
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.pdfpage import PDFPage
-from mysql import connector
+
+
+import pymongo
+#from mysql import connector
 import ntpath
+import pathAnalysis
+
+#C:\Users\billi\OneDrive\Library\ITKnowledge\Python\python_tutorial.pdf
 
 
-def to_text(filePath):
-    '''Read words of a pdf file'''
-    output = StringIO()
-    manager = PDFResourceManager()
-    converter = TextConverter(manager, output, laparams=LAParams())
-    interpreter = PDFPageInterpreter(manager, converter)
+def analyze_files(path):
+    file_paths = pathAnalysis.get_path_info(path)
+    print(len(file_paths))
+    file_paths = [path['full_path'] for path in file_paths if path['isfile'] and path['file_extension']=='pdf']
+    print(len(file_paths))
+    with pymongo.MongoClient("localhost", 27017) as client:
+        for file_path in file_paths:
+            print(file_path)
+            try:
+                t1 = datetime.now()
+                content = to_text(file_path)
+                duration = (datetime.now() - t1).seconds
+                log_document(client, file_path, content, 'pdf', duration)
+            except Exception as e:
+                if client:
+                    log_document(client, file_path, str(e), 'pdf', 0)
+                print(e)
 
-    with open(filePath, 'rb') as fp:
-        for page in PDFPage.get_pages(fp):
-            interpreter.process_page(page)
 
-    converter.close()
-    text = output.getvalue()
-    output.close()
-    return text
+def log_document(mongo_client, file_path, content, file_type, duration):
+    '''
+    log the parsed doc
+    :param file_path: file path
+    :param content: content parsed from file
+    :param file_type: file type, can be pdf, txt
+    :return:
+    '''
+    db = mongo_client.dbFilesAnalysis
+    db.tblFiles.insert_one({'file_path' : file_path, 'content' : content, 'file_type': file_type, 'duration':duration,'insert_time_utc':datetime.utcnow()})
+    mongo_client.close()
 
 #count the data with Counter
-def count_words(text):
-    '''count the words'''
-    seperates = ['\n', ' ', ',' ,'\x0c']
-    result = Counter()
-    temp = ''
-    for c in text:
-        if c in seperates:
-            if temp:
-                result[temp] += 1
-                temp = ''
-        else:
-            temp += c
 
-    return result
 
+def test_count_wors():
+    txt = 'Python programming — text and web mining\n\nFinn'
+    result = count_words(txt)
+    assert(len(result)==7)
 
 #Storage part
 
